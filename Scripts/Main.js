@@ -6,15 +6,11 @@ var Ts;
             this._currentCoords = [];
             this._markers = [];
             this._leftMenu = menuDiv;
-            var MarkerWithLabel;
-            this._mapWithLabel = MarkerWithLabel;
             this.DevicesGot = function (devices) {
-                var menu = document.getElementById(_this._leftMenu);
-                devices.forEach(function (_) { return menu.innerHTML += ('<br>    <input type="checkbox"  onclick="foo(' + _.imei + ');"  id="' + _.imei + '">' + _.name); }); // боже, какой пиздец!
+                _this._leftMenu.data.clearAll();
+                devices.forEach(function (_) { _.id = _.imei; _this._leftMenu.data.add(_); });
             };
             this.CoordinatesGot = function (coordinates) {
-                if (coordinates.length == 0)
-                    return;
                 _this._currentCoords = coordinates.sort(function (n1, n2) {
                     if (n1.packet_time > n2.packet_time) {
                         return 1;
@@ -40,10 +36,11 @@ var Ts;
             this._webApi = new Ts.WebApi(config.MainSiteURL);
             this._webApi.GetDeviceList(this.DevicesGot);
             //this._webApi.GetDeviceCoordinates('353173060493077', this.CoordinatesGot);
+            //
         }
         Main.prototype.SetCoordinates = function (coordinates) {
-            if (this._markers != null)
-                this._markers.forEach(function (_) { return _.setMap(null); });
+            var _this = this;
+            this._markers.forEach(function (_) { return _.setMap(null); });
             if (this._polyline != null)
                 this._polyline.setMap(null);
             if (coordinates.length == 0)
@@ -51,25 +48,33 @@ var Ts;
             var bounds = new google.maps.LatLngBounds();
             var labelCaption = 0;
             var polyLinePoints = [];
-            for (var i = 0; i < coordinates.length; i++) {
-                var _ = coordinates[i];
+            coordinates.forEach(function (_) {
                 var pinColor = config.IconColorRad0;
                 if (_.rad > 0)
                     pinColor = config.IconColorRadMoreThan0;
+                var pinImage = new google.maps.MarkerImage("http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=" + "" + "|" + pinColor);
                 var marker = new MarkerWithLabel({
                     position: new google.maps.LatLng(_.lat, _.lon),
                     draggable: false,
                     raiseOnDrag: false,
-                    map: this._map,
-                    labelContent: _.packet_time.substr(10, 5),
+                    map: _this._map,
+                    labelContent: _.packet_time.substr(11, 5),
                     labelAnchor: new google.maps.Point(22, 0),
                     labelClass: "labels",
-                    labelStyle: { opacity: 0.75 }
+                    labelStyle: { opacity: 0.75 },
+                    icon: pinImage
                 });
+                //           var marker = new google.maps.Marker({
+                //               title: '(click to open)',
+                //               position: new google.maps.LatLng(_.lat, _.lon),
+                //map: this._map,
+                //draggable: false,
+                //               animation: google.maps.Animation.DROP,
+                //               icon: pinImage
+                //           })
                 polyLinePoints.push({ lat: _.lat, lng: _.lon });
-                this._markers.push(marker);
+                _this._markers.push(marker);
                 bounds.extend(marker.getPosition());
-                labelCaption++;
                 var contentString = '<div id="content">' + '';
                 //contentString += '<b>Время пакета</b>: ' + _.packet_time + ' </br>';
                 contentString += '<b>Долгота</b>: ' + _.lon + ' </br>';
@@ -86,12 +91,12 @@ var Ts;
                 var infoWindow = new google.maps.InfoWindow({
                     content: contentString
                 });
-                infoWindow.open(this._map, marker);
-                var m = this._map;
+                infoWindow.open(_this._map, marker);
+                var m = _this._map;
                 marker.addListener('click', function () {
                     infoWindow.open(m, marker);
                 });
-            } //);
+            });
             this._polyline = new google.maps.Polyline({
                 geodesic: true,
                 strokeColor: '#FF0000',
@@ -101,21 +106,18 @@ var Ts;
             });
             this._polyline.setMap(this._map);
             this._map.setCenter(bounds.getCenter());
-            this._map.fitBounds(bounds);
+            if (this._markers.length > 1)
+                this._map.fitBounds(bounds);
+            else
+                this._map.setZoom(16);
         };
         Main.prototype.OnDeviceSelected = function (id) {
-            var checkbox;
-            checkbox = $('#' + id)[0];
-            if (checkbox.checked) {
-                this._webApi.GetDeviceCoordinates(id, this.CoordinatesGot);
-            }
-            else {
-                if (this._markers != null)
-                    this._markers.forEach(function (_) { return _.setMap(null); });
-                if (this._polyline != null)
-                    this._polyline.setMap(null);
-                this._markers = [];
-            }
+            if (this._markers != null)
+                this._markers.forEach(function (_) { return _.setMap(null); });
+            if (this._polyline != null)
+                this._polyline.setMap(null);
+            this._markers = [];
+            this._webApi.GetDeviceCoordinates(id, this.CoordinatesGot);
         };
         Main.prototype.OnDeviceDateChanged = function (date) {
             var d = date.getDate();

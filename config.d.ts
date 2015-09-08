@@ -4,3 +4,5 @@ declare class config
     public static IconColorRad0: string;
     public static IconColorRadMoreThan0: string;
 }
+
+declare var MarkerWithLabel : any;
