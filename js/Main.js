@@ -5,8 +5,15 @@ var Ts;
             var _this = this;
             this._currentCoords = [];
             this._markers = [];
+            this._circles = [];
+            this._devices = [];
             this._leftMenu = menuDiv;
             this.DevicesGot = function (devices) {
+                devices.forEach(function (_) {
+                    if (_.last_position != null)
+                        _.last_position.forEach(function (_) { _.lat = Number(_.lat); _.lon = Number(_.lon); _.rad = Number(_.rad); });
+                });
+                _this._devices = devices;
                 _this._leftMenu.data.clearAll();
                 devices.forEach(function (_) { _.id = _.imei; _this._leftMenu.data.add(_); });
             };
@@ -36,11 +43,12 @@ var Ts;
             this._webApi = new Ts.WebApi(config.MainSiteURL);
             this._webApi.GetDeviceList(this.DevicesGot);
             //this._webApi.GetDeviceCoordinates('353173060493077', this.CoordinatesGot);
-            //
         }
-        Main.prototype.SetCoordinates = function (coordinates) {
+        Main.prototype.SetCoordinates = function (coordinates, isDrawPolyline) {
             var _this = this;
+            if (isDrawPolyline === void 0) { isDrawPolyline = true; }
             this._markers.forEach(function (_) { return _.setMap(null); });
+            this._circles.forEach(function (_) { return _.setMap(null); });
             if (this._polyline != null)
                 this._polyline.setMap(null);
             if (coordinates.length == 0)
@@ -53,8 +61,9 @@ var Ts;
                 if (_.rad > 0)
                     pinColor = config.IconColorRadMoreThan0;
                 var pinImage = new google.maps.MarkerImage("http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=" + "" + "|" + pinColor);
+                var position = new google.maps.LatLng(_.lat, _.lon);
                 var marker = new MarkerWithLabel({
-                    position: new google.maps.LatLng(_.lat, _.lon),
+                    position: position,
                     draggable: false,
                     raiseOnDrag: false,
                     map: _this._map,
@@ -64,25 +73,17 @@ var Ts;
                     labelStyle: { opacity: 0.75 },
                     icon: pinImage
                 });
-
-                var lbs = new google.maps.Circle({
+                var circle = new google.maps.Circle({
                     strokeColor: '#FF0000',
                     strokeOpacity: 0.8,
                     strokeWeight: 2,
                     fillColor: '#FF0000',
                     fillOpacity: 0.35,
-                    map: this._map,
-                    center: new google.maps.LatLng(_.lat, _.lon),
+                    map: _this._map,
+                    center: position,
                     radius: _.rad
                 });
-                //           var marker = new google.maps.Marker({
-                //               title: '(click to open)',
-                //               position: new google.maps.LatLng(_.lat, _.lon),
-                //map: this._map,
-                //draggable: false,
-                //               animation: google.maps.Animation.DROP,
-                //               icon: pinImage
-                //           })
+                _this._circles.push(circle);
                 polyLinePoints.push({ lat: _.lat, lng: _.lon });
                 _this._markers.push(marker);
                 bounds.extend(marker.getPosition());
@@ -90,37 +91,32 @@ var Ts;
                 contentString += '<b>Время пакета</b>: ' + _.packet_time + ' </br>';
                 contentString += '<b>Долгота</b>: ' + _.lon + ' </br>';
                 contentString += '<b>Широта</b>: ' + _.lat + ' </br>';
-                //contentString += '<b>Точность</b>: ' + _.rad + ' </br>';
-                //contentString += '<b>Тип пакета</b>: ' + _.packet_type + ' </br>';
-                if (_['speed'] < 2) {
-                    _['speed'] = 0;
-                }
                 contentString += '<b>Скорость</b>: ' + _.speed + ' км/ч</br>';
                 contentString += '<b>Азимут</b>: ' + _.direction + ' </br>';
-                //contentString += '<b>"Черный ящик"</b>: ' + _.blackbox + ' </br>';
                 contentString += '</div>';
                 var infoWindow = new google.maps.InfoWindow({
                     content: contentString
                 });
-                //infoWindow.open(_this._map, marker);
                 var m = _this._map;
                 marker.addListener('click', function () {
                     infoWindow.open(m, marker);
                 });
             });
-            this._polyline = new google.maps.Polyline({
-                geodesic: true,
-                strokeColor: '#FF0000',
-                strokeOpacity: 1.0,
-                strokeWeight: 2,
-                path: polyLinePoints
-            });
-            this._polyline.setMap(this._map);
+            if (isDrawPolyline) {
+                this._polyline = new google.maps.Polyline({
+                    geodesic: true,
+                    strokeColor: '#FF0000',
+                    strokeOpacity: 1.0,
+                    strokeWeight: 2,
+                    path: polyLinePoints
+                });
+                this._polyline.setMap(this._map);
+            }
             this._map.setCenter(bounds.getCenter());
             if (this._markers.length > 1)
                 this._map.fitBounds(bounds);
             else
-                this._map.setZoom(16);
+                this._map.setZoom(12);
         };
         Main.prototype.OnDeviceSelected = function (id) {
             if (this._markers != null)
@@ -128,14 +124,25 @@ var Ts;
             if (this._polyline != null)
                 this._polyline.setMap(null);
             this._markers = [];
-            this._webApi.GetDeviceCoordinates(id, this.CoordinatesGot);
+            if (id == null || id.length == 0)
+                return;
+            var coords;
+            debugger;
+            if (id.length == 1) {
+                coords = this._devices.First(function (_) { return id[0] == _.imei; }).last_position;
+                this.SetCoordinates(coords);
+            }
+            else {
+                coords = this._devices.Where(function (_) { return id.Contains(_.imei); }).Select(function (_) { return _.last_position; }).Where(function (_) { return _ != null; }).Select(function (_) { return _[0]; });
+                this.SetCoordinates(coords, false);
+            }
         };
         Main.prototype.OnDeviceDateChanged = function (date) {
             var d = date.getDate();
             var m = date.getMonth() + 1;
             var y = date.getFullYear();
             var dat = '' + y + '-' + (m <= 9 ? '0' + m : m) + '-' + (d <= 9 ? '0' + d : d); // Боже, какой пиздец Х2.
-            this.SetCoordinates(this._currentCoords.Where(function (_) { return _.packet_time.substring(0, 10) == dat; }));
+            //this.SetCoordinates(this._currentCoords.Where(function (_) { return _.packet_time.substring(0, 10) == dat; }));
         };
         return Main;
     })();

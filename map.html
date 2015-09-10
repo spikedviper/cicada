@@ -38,6 +38,8 @@
 <body>
 <script type="text/javascript" charset="utf-8">
     grid = webix.ui({
+		select:"row",
+		multiselect:true,
         rows: [
             { type: "header", template: "Цикада" },
             {
@@ -47,14 +49,11 @@
                             { view: "toolbar", elements: [{ view: "text", id: "list_input" }] },
                             {
                                 view: 'list', id: 'leftmenu', select: "multiselect", template: '#name# <span class="device">&#128269;</span><span class="settings">&#9881;</span>', tooltip: { template: '<b>IMEI:</b> #imei#<br><b>Имя устройства:</b> #name#' },
-                                onClick: {
-                                    device: function (e, imei) {
-                                        main.OnDeviceSelected(imei);
-                                    },
-                                    settings: function (e, imei) {
-                                        webix.message('Настройка: ' + imei);
-                                    }
-                                }
+								on: {
+									onSelectChange: function () {
+										main.OnDeviceSelected(this.getSelectedId(true));
+									}
+								},
                             },
                             { view: "calendar", id: "calendar"}
                         ]
