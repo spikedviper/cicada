@@ -1,101 +1,75 @@
 ﻿<!DOCTYPE html>
 <html>
 <head>
-	<link rel="stylesheet" href="http://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
-	<script src="http://code.jquery.com/jquery-1.10.2.js"></script>
-	<script src="http://code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+    <script src="/js/jquery.min.js"></script>
 
-	<script type="text/javascript" src="Scripts/datepicker-ru.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js"></script>
+    <script src="/js/markerwithlabel.js"></script>
 
-	<script src="https://maps.googleapis.com/maps/api/js"></script>
-	<script src="Scripts/markerwithlabel.js"></script>
+    <script src="/js/config.js"></script>
+    <script src="/js/WebApi.js"></script>
+    <script src="/js/Device.js"></script>
+    <script src="/js/Main.js"></script>
+    <script src="/js/WhereExtension.js"></script>
 
-	<script src="config.js"></script>
-	<script src="Scripts/WebApi.js"></script>
-	<script src="Scripts/Device.js"></script>
-	<script src="Scripts/Main.js"></script>
-	<script src="Scripts/WhereExtension.js"></script>
+    <link rel="stylesheet" href="/css/webix.css" type="text/css" media="screen" charset="utf-8">
+    <script src="/js/webix.js" type="text/javascript" charset="utf-8"></script>
+    <title>Цикада: карта</title>
 
-	<link rel="stylesheet" href="Scripts/webix.css" type="text/css" media="screen" charset="utf-8">
-	<script src="Scripts/webix.js" type="text/javascript" charset="utf-8"></script>
-	<title>Цикада: карта</title>
+    <link rel="stylesheet" href="/css/style.css" type="text/css" media="screen" charset="utf-8">
 
+    <script>
+        var main;
+        $(function () {
+            $$("calendar").attachEvent("onChange", function(date){
+                main.OnDeviceDateChanged($$("calendar").getValue());
+            });
+            main = new Ts.Main($$("leftmenu"), "googlemaps");
+        });
 
-	<style type="text/css">
-		.labels {
-			color: red;
-			background-color: white;
-			font-family: "Lucida Grande", "Arial", sans-serif;
-			font-size: 10px;
-			font-weight: bold;
-			text-align: center;
-			width: 40px;
-			border: 2px solid black;
-			white-space: nowrap;
-		}
-	</style>
+        function foo(f) {
+            debugger;
+            main.OnDeviceSelected(f);
+        }
+    </script>
 
-	<script>
-
-		var main;
-		$(function () {
-			$("#calendar").datepicker({
-				onSelect: function (dateText) {
-					main.OnDeviceDateChanged($(this).datepicker('getDate'));
-				}
-			});
-
-			main = new Ts.Main($$("leftmenu"), "googlemaps");
-		});
-
-		function foo(f) {
-			debugger;
-			main.OnDeviceSelected(f);
-		}
-	</script>
-
-	<style>
-		#calendar {
-			font-size: 11px;
-			width: 200px;
-		}
-	</style>
 </head>
 
 <body>
-	<script type="text/javascript" charset="utf-8">
-		grid = webix.ui({
-			rows: [
-				{ type: "header", template: "Цикада" },
-				{
-					cols: [
-					  {
-					  	rows: [
-						   { view: "toolbar", elements: [{ view: "text", id: "list_input" }] },
-						   {
-						   	view: 'list', id: 'leftmenu', select: 1, template: '<span class="device">#name#</span>', tooltip: { template: '<b>IMEI:</b> #imei#<br><b>Имя устройства:</b> #name#' },
-						   	onClick: {
-						   		device: function (e, imei) {
-						   			webix.message('device id: ' + imei);
-						   			main.OnDeviceSelected(imei);
-						   		}
-						   	}
-						   },
-						   { body: '<div id="calendar"></div>', width: 215, height: 220 }
-					  	]
-					  },
-					  { view: "resizer" },
-					  { body: '<div id="googlemaps" style="height: 100%;width: 100%;"></div>' }
-					]
-				}
-			]
-		});
+<script type="text/javascript" charset="utf-8">
+    grid = webix.ui({
+        rows: [
+            { type: "header", template: "Цикада" },
+            {
+                cols: [
+                    {
+                        rows: [
+                            { view: "toolbar", elements: [{ view: "text", id: "list_input" }] },
+                            {
+                                view: 'list', id: 'leftmenu', select: "multiselect", template: '#name# <span class="device">&#128269;</span><span class="settings">&#9881;</span>', tooltip: { template: '<b>IMEI:</b> #imei#<br><b>Имя устройства:</b> #name#' },
+                                onClick: {
+                                    device: function (e, imei) {
+                                        main.OnDeviceSelected(imei);
+                                    },
+                                    settings: function (e, imei) {
+                                        webix.message('Настройка: ' + imei);
+                                    }
+                                }
+                            },
+                            { view: "calendar", id: "calendar"}
+                        ]
+                    },
+                    { body: '<div id="googlemaps" style="height: 100%;width: 100%;"></div>' }
+                ]
+            }
+        ]
+    });
 
-		$$("list_input").attachEvent("onTimedKeyPress", function () {
-			var value = this.getValue().toLowerCase(); //input data is derived
-			$$("leftmenu").filter('#name#', value);
-		});
-	</script>
+    $$("list_input").attachEvent("onTimedKeyPress", function () {
+        var value = this.getValue().toLowerCase(); //input data is derived
+        $$("leftmenu").filter('#name#', value);
+    });
+</script>
 </body>
 </html>
 

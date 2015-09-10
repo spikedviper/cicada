@@ -64,6 +64,17 @@ var Ts;
                     labelStyle: { opacity: 0.75 },
                     icon: pinImage
                 });
+
+                var lbs = new google.maps.Circle({
+                    strokeColor: '#FF0000',
+                    strokeOpacity: 0.8,
+                    strokeWeight: 2,
+                    fillColor: '#FF0000',
+                    fillOpacity: 0.35,
+                    map: this._map,
+                    center: new google.maps.LatLng(_.lat, _.lon),
+                    radius: _.rad
+                });
                 //           var marker = new google.maps.Marker({
                 //               title: '(click to open)',
                 //               position: new google.maps.LatLng(_.lat, _.lon),
@@ -76,7 +87,7 @@ var Ts;
                 _this._markers.push(marker);
                 bounds.extend(marker.getPosition());
                 var contentString = '<div id="content">' + '';
-                //contentString += '<b>Время пакета</b>: ' + _.packet_time + ' </br>';
+                contentString += '<b>Время пакета</b>: ' + _.packet_time + ' </br>';
                 contentString += '<b>Долгота</b>: ' + _.lon + ' </br>';
                 contentString += '<b>Широта</b>: ' + _.lat + ' </br>';
                 //contentString += '<b>Точность</b>: ' + _.rad + ' </br>';
@@ -91,7 +102,7 @@ var Ts;
                 var infoWindow = new google.maps.InfoWindow({
                     content: contentString
                 });
-                infoWindow.open(_this._map, marker);
+                //infoWindow.open(_this._map, marker);
                 var m = _this._map;
                 marker.addListener('click', function () {
                     infoWindow.open(m, marker);
