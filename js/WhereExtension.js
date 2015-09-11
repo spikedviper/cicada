@@ -1,3 +1,9 @@
+Array.prototype.Contains = function (item) {
+    for (var i = 0; i < this.length; i++)
+        if (this[i] == item)
+            return true;
+    return false;
+};
 /** return First element in array  */
 Array.prototype.First = function (predicate) {
     for (var i = 0; i < this.length; i++)

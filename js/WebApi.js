@@ -9,8 +9,8 @@ var Ts;
             var keys = 'devlist';
             this.Read(keys, callback);
         };
-        WebApi.prototype.GetDeviceCoordinates = function (imea, callback) {
-            var keys = 'devcoords/' + imea;
+        WebApi.prototype.GetDeviceCoordinates = function (imea, date, callback) {
+            var keys = 'devcoords/' + imea + '/' + date;
             this.Read(keys, callback);
         };
         WebApi.prototype.Read = function (keys, callback) {

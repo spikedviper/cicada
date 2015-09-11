@@ -5,6 +5,7 @@ var Ts;
             var _this = this;
             this._currentCoords = [];
             this._markers = [];
+            this._polylines = [];
             this._circles = [];
             this._devices = [];
             this._leftMenu = menuDiv;
@@ -18,7 +19,9 @@ var Ts;
                 devices.forEach(function (_) { _.id = _.imei; _this._leftMenu.data.add(_); });
             };
             this.CoordinatesGot = function (coordinates) {
-                _this._currentCoords = coordinates.sort(function (n1, n2) {
+                if (coordinates == null || coordinates.length == 0)
+                    return;
+                coordinates = coordinates.sort(function (n1, n2) {
                     if (n1.packet_time > n2.packet_time) {
                         return 1;
                     }
@@ -27,9 +30,8 @@ var Ts;
                     }
                     return 0;
                 });
-                _this._currentCoords.forEach(function (_) { _.lat = Number(_.lat); _.lon = Number(_.lon); _.rad = Number(_.rad); });
-                var dat = _this._currentCoords.Last(null).packet_time;
-                _this.SetCoordinates(_this._currentCoords.Where(function (_) { return _.packet_time.indexOf(dat) == 0; }));
+                coordinates.forEach(function (_) { _.lat = Number(_.lat); _.lon = Number(_.lon); _.rad = Number(_.rad); });
+                _this.SetCoordinates(coordinates, true, false);
             };
             var mapOptions = {
                 zoom: 16,
@@ -42,15 +44,13 @@ var Ts;
             this._map = new google.maps.Map(document.getElementById(mapDiv), mapOptions);
             this._webApi = new Ts.WebApi(config.MainSiteURL);
             this._webApi.GetDeviceList(this.DevicesGot);
-            //this._webApi.GetDeviceCoordinates('353173060493077', this.CoordinatesGot);
         }
-        Main.prototype.SetCoordinates = function (coordinates, isDrawPolyline) {
+        Main.prototype.SetCoordinates = function (coordinates, isDrawPolyline, isNeedToClearMap) {
             var _this = this;
             if (isDrawPolyline === void 0) { isDrawPolyline = true; }
-            this._markers.forEach(function (_) { return _.setMap(null); });
-            this._circles.forEach(function (_) { return _.setMap(null); });
-            if (this._polyline != null)
-                this._polyline.setMap(null);
+            if (isNeedToClearMap === void 0) { isNeedToClearMap = true; }
+            if (isNeedToClearMap)
+                this.CleanMap();
             if (coordinates.length == 0)
                 return;
             var bounds = new google.maps.LatLngBounds();
@@ -103,14 +103,15 @@ var Ts;
                 });
             });
             if (isDrawPolyline) {
-                this._polyline = new google.maps.Polyline({
+                var polyline = new google.maps.Polyline({
                     geodesic: true,
                     strokeColor: '#FF0000',
                     strokeOpacity: 1.0,
                     strokeWeight: 2,
                     path: polyLinePoints
                 });
-                this._polyline.setMap(this._map);
+                polyline.setMap(this._map);
+                this._polylines.push(polyline);
             }
             this._map.setCenter(bounds.getCenter());
             if (this._markers.length > 1)
@@ -119,30 +120,37 @@ var Ts;
                 this._map.setZoom(12);
         };
         Main.prototype.OnDeviceSelected = function (id) {
-            if (this._markers != null)
-                this._markers.forEach(function (_) { return _.setMap(null); });
-            if (this._polyline != null)
-                this._polyline.setMap(null);
-            this._markers = [];
+            this.CleanMap();
+            this._lastSelectedDevices = id;
             if (id == null || id.length == 0)
                 return;
             var coords;
-            debugger;
             if (id.length == 1) {
                 coords = this._devices.First(function (_) { return id[0] == _.imei; }).last_position;
                 this.SetCoordinates(coords);
             }
             else {
-                coords = this._devices.Where(function (_) { return id.Contains(_.imei); }).Select(function (_) { return _.last_position; }).Where(function (_) { return _ != null; }).Select(function (_) { return _[0]; });
+                coords = this._devices.Where(function (_) { return id.Contains(_.imei) && _.last_position != null && _.last_position[0] != null; }).Select(function (_) { return _.last_position[0]; });
                 this.SetCoordinates(coords, false);
             }
         };
         Main.prototype.OnDeviceDateChanged = function (date) {
+            var _this = this;
+            this.CleanMap();
             var d = date.getDate();
             var m = date.getMonth() + 1;
             var y = date.getFullYear();
             var dat = '' + y + '-' + (m <= 9 ? '0' + m : m) + '-' + (d <= 9 ? '0' + d : d); // Боже, какой пиздец Х2.
-            //this.SetCoordinates(this._currentCoords.Where(function (_) { return _.packet_time.substring(0, 10) == dat; }));
+            this._devices.Where(function (_) { return _this._lastSelectedDevices.Contains(_.imei); }).forEach(function (_) { return _this._webApi.GetDeviceCoordinates(_.imei, dat, _this.CoordinatesGot); });
+            //this.SetCoordinates(this._currentCoords.Where(_=> _.packet_time.substring(0, 10) == dat));
+        };
+        Main.prototype.CleanMap = function () {
+            this._markers.forEach(function (_) { return _.setMap(null); });
+            this._circles.forEach(function (_) { return _.setMap(null); });
+            this._polylines.forEach(function (_) { return _.setMap(null); });
+            this._markers = [];
+            this._circles = [];
+            this._polylines = [];
         };
         return Main;
     })();
